@@ -47,7 +47,6 @@ if [ "$usefile" -a "$style" ] ; then
 fi
 
 result=0
-output=""
 
 for filename in $@; do
     if [ -d "$filename" ] ; then
@@ -63,21 +62,18 @@ for filename in $@; do
     fi
 
     if [ "$usefile" ] ; then
-        current_output=$(clang-format -style=file "$filename" | diff "$filename" -)
+        output=$(clang-format -style=file "$filename" | diff "$filename" -)
     elif [ "$style" ] ; then
-        current_output=$(clang-format -style=$style "$filename" | diff "$filename" -)
+        output=$(clang-format -style=$style "$filename" | diff "$filename" -)
     else
-        current_output=$(clang-format -style=LLVM "$filename" | diff "$filename" -)
+        output=$(clang-format -style=LLVM "$filename" | diff "$filename" -)
     fi
 
-    if [ ! -z "$current_output" ] ; then
-        if [ -z "$output" ] ; then
-            output=$(printf "%s" "${filename}:")
-        else
-            output=$(printf "%s\n\n%s" "${output}" "${filename}:")
-        fi
-        output=$(printf "%s\n%s" "${output}" "${current_output}")
+    if [ ! -z "$output" ] ; then
+        printf "%s\n%s\n\n" "${filename}:" "${output}"
         result=1
+    else
+        printf "%s\n%s\n\n" "${filename}:" "No differences found"
     fi
 done
 
@@ -85,9 +81,6 @@ if [ $result -eq 0 ] ; then
     echo "clangformatdiff.sh: files conform to format"
 else
     >&2 echo "Error: differences found"
-    >&2 echo ""
 fi
-
-printf "%s\n" "$output"
 
 exit $result
