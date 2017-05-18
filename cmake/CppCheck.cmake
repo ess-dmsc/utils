@@ -29,27 +29,37 @@ if(CPPCHECK)
     add_custom_target(cppcheck)
 
     function(add_cppcheck_target cpp_target)
-        # Convert extra arguments into a list.
+        # Convert extra arguments into a list and a string of arguments.
         set(ignored_files "")
         foreach(name ${ARGN})
+            # Get full path to file.
             get_filename_component(name ${name} REALPATH)
+            # Append to the list of files to exclude.
             list(APPEND excluded_files ${name})
+            # Prepare cppcheck invocation options for supression.
             set(suppressed_files --suppress=*:${name} ${suppressed_files})
         endforeach()
 
+        # Get list of target source files.
         get_target_property(cpp_srcs ${cpp_target} SOURCES)
 
+        # Build list of source files for cppcheck invocation.
         set(cpp_src_list "")
         foreach(src_file ${cpp_srcs})
+            # Get full path to file.
             get_filename_component(src_file ${src_file} REALPATH)
+            # Check if file is in exclusion list.
             list(FIND excluded_files ${src_file} file_index)
             if(${file_index} EQUAL -1)
+                # File is not in exclusion list, add it to list of sources.
                 set(cpp_src_list ${cpp_src_list} ${src_file})
             endif()
         endforeach(src_file)
 
+        # Get list of target include directories.
         get_target_property(cpp_inc_dirs ${cpp_target} INCLUDE_DIRECTORIES)
 
+        # Build list of include directories for cppcheck invocation.
         set(cpp_inc_list "")
         foreach(inc_dir ${cpp_inc_dirs})
             # Check if directory is inside current project.
