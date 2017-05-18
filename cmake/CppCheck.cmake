@@ -79,7 +79,9 @@ if(CPPCHECK)
                 --force
                 --quiet
                 --inline-suppr
-                --enable=all
+                --enable=style
+                --enable=unusedFunction
+                --enable=missingInclude
                 --suppress=missingIncludeSystem
                 ${suppressed_files}
                 ${cpp_inc_list}
