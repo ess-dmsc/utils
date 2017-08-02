@@ -24,9 +24,10 @@ and leave the swarm with
 
 ## Testing the setup
 
-You can send metrics to Graphite by running
+You can send metrics to Graphite by running either of the commands below:
 
-    $ echo "<metric_name> <value> `date +%s`" | nc -c 127.0.0.1 2003
+    $ echo "<metric_name> <value> `date +%s`" | nc -c 127.0.0.1 2003 # Mac
+    $ echo "<metric_name> <value> `date +%s`" | nc -C 127.0.0.1 2003 # Linux
 
 where `<metric_name>` and `<value>` must be substituted.
 
