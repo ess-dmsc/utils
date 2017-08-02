@@ -3,7 +3,7 @@
 A local Graphite and Grafana Docker setup for development and testing.
 
 
-## Instructions
+## Docker instructions
 
 Start a swarm with
 
