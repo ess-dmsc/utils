@@ -28,5 +28,13 @@ You can send metrics to Graphite by running
 
     $ echo "<metric_name> <value> `date +%s`" | nc -c 127.0.0.1 2003
 
-where `<metric_name>` and `<value>` must be substituted. The Graphite web
-interface can be accessed at *localhost:80*.
+where `<metric_name>` and `<value>` must be substituted.
+
+The Graphite web interface can be accessed at *localhost:80* and the Grafana
+web interface, at *localhost:3000*. You can log into the Grafana server with
+user *admin* and password *admin*.
+
+To add a data source to Grafana, select **Data Sources** and **Add data
+source**. In the *Add data source* screen, choose a name for the data source
+and select *Graphite* as the type. Set the URL to *http://graphite:80* and
+access to *proxy*. Click **Add** to finish.
