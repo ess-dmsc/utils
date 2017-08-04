@@ -13,7 +13,9 @@ and deploy the stack by running
 
     $ docker stack deploy -c docker-compose.yml <name>
 
-substituting `<name>` by a name for the stack. You can remove the stack with
+substituting `<name>` by a name for the stack.
+
+You can remove the stack with
 
     $ docker stack rm <name>
 
