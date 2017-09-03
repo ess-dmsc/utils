@@ -18,6 +18,9 @@ services:
     image: grafana/grafana:4.4.2
     ports:
       - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
 
 volumes:
   graphite-data:
+  grafana-data:
