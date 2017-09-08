@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="2.0.0"
+version_str="2.0.1"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <dir>
@@ -119,7 +119,7 @@ if [ -z "$pkg_user" ] ; then
 fi
 
 if [ -z "$pkg_channel" ] ; then
-    pkg_user="testing"
+    pkg_channel="testing"
 fi
 
 if [ -z "$dest_folder" ] ; then
