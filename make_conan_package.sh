@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="2.0.1"
+version_str="2.1.0"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <dir>
@@ -157,9 +157,9 @@ if [ -z "$IS_RELEASE" ] ; then
 fi
 
 cp -r "$conan_dir" "$dest_folder" || exit 2
+mv "$dest_folder/conanfile.py.template" "$dest_folder/conanfile.py" || exit 2
 
 sed -i"" -e "s/<version>/$PACKAGE_VERSION/g" "$dest_folder"/conanfile.py
-sed -i"" -e "s/<version>/$PACKAGE_VERSION/g" "$dest_folder"/test_package/conanfile.py
 sed -i"" -e "s/<commit>/$PACKAGE_COMMIT/g" "$dest_folder"/conanfile.py
 
 # Print script and packaging information.
