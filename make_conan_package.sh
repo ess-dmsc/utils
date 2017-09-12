@@ -1,30 +1,22 @@
 #!/bin/bash
 
-version_str="2.2.0"
+version_str="3.0.0"
 
 usage_str="\
-USAGE: $0 [OPTIONS] <dir>
+USAGE: $0 [OPTIONS] <path> <version> <commit>
   Substitute variables in conanfile and build Conan package
 "
 
 description_str="\
 DESCRIPTION:
-  <dir> must be a directory containing a conanfile.py and a test package. Its
-  contents are copied into a destination folder that must not already exist,
-  named conan_packaging by default, and version and commit are substituted by
-  sed according to the following rules:
-
-    version = \"<version>\" -> version = \"\$PACKAGE_VERSION\"
-    git checkout <commit>\" -> git checkout \$PACKAGE_COMMIT\"
-
-  The package is built and the destination folder is removed afterwards, unless
-  -k is used. The destination folder name can be changed with -d.
-
-  Version and commit values can be defined by setting the environment variables
-  PACKAGE_VERSION and PACKAGE_COMMIT, respectively. If PACKAGE_VERSION is not
-  set, 0.1.0-rc.1 is used. If IS_RELEASE is not set, a '+' character and the
-  first seven characters of the commit SHA-1 is appended to PACKAGE_VERSION. If
-  PACKAGE_COMMIT is not set, the current commit SHA-1 is used.
+  <path> must be the path to a directory containing a conanfile.py and a test
+  package. Its conanfile.py and test_package folder are copied into a
+  destination folder that must not already exist, named conan_packaging by
+  default, and <version> and <commit> are substituted using sed. The package is
+  built and the destination folder is removed afterwards, unless -k is used.
+  The destination folder name can be changed with -d. If -r is not set, a '+'
+  character and the first seven characters of <commit> are appended to
+  <version>.
 "
 
 options_and_returns_str="\
@@ -33,13 +25,14 @@ OPTIONS:
   -u <user>     Set package user name (default: ess-dmsc)
   -c <channel>  Set package channel name (default: testing)
   -d <dest>     Destination folder name (default: conan_packaging)
+  -r            Create release package
   -k            Keep destination package folder
   -v            Print version and exit
 
 ENVIRONMENT VARIABLES:
-  PACKAGE_VERSION  replaces version
-  PACKAGE_COMMIT   replaces commit
-  IS_RELEASE       set to omit commit number from version string
+  pkg_version  replaces version
+  pkg_commit   replaces commit
+  is_release       set to omit commit number from version string
 
 RETURNS:
   0  success
@@ -67,7 +60,10 @@ version() {
 # Argument and option handling
 # ============================
 
-while getopts "d:u:c:khv" arg; do
+unset is_release
+unset keep_folder
+
+while getopts "d:u:c:rkhv" arg; do
     case "${arg}" in
         u)
             pkg_user="${OPTARG}"
@@ -77,6 +73,9 @@ while getopts "d:u:c:khv" arg; do
             ;;
         d)
             dest_folder="${OPTARG}"
+            ;;
+        r)
+            is_release="TRUE"
             ;;
         k)
             keep_folder="TRUE"
@@ -94,14 +93,14 @@ done
 
 shift $((OPTIND-1))
 
-if [ $# -eq 0 ] ; then
-    >&2 echo "Error: missing directory"
+if [ $# -lt 3 ] ; then
+    >&2 echo "Error: missing arguments"
     >&2 echo ""
     usage
     exit 2
 fi
 
-if [ $# -gt 1 ] ; then
+if [ $# -gt 3 ] ; then
     >&2 echo "Error: too many arguments"
     >&2 echo ""
     usage
@@ -109,10 +108,26 @@ if [ $# -gt 1 ] ; then
 fi
 
 conan_dir=$1
+pkg_version=$2
+pkg_commit=$3
 
 if [ ! -d "$conan_dir" ] ; then
     >&2 echo "Error: invalid directory"
     >&2 echo "  $conan_dir"
+    >&2 echo ""
+    usage
+    exit 2
+fi
+
+if [ -z "$pkg_version" ] ; then
+    >&2 echo "Error: version cannot be empty"
+    >&2 echo ""
+    usage
+    exit 2
+fi
+
+if [ -z "$pkg_commit" ] ; then
+    >&2 echo "Error: commit cannot be empty"
     >&2 echo ""
     usage
     exit 2
@@ -141,42 +156,29 @@ fi
 # Packaging
 # =========
 
-if [ -z "$PACKAGE_COMMIT" ] ; then
-    current_dir="$(pwd)"
-    cd "$conan_dir"
-    PACKAGE_COMMIT="$(git rev-parse HEAD)"
-    cd "$current_dir"
-fi
-
-# Get first seven characters in string.
-COMMIT_SHORT="$(echo $PACKAGE_COMMIT | awk '{print substr($0,0,7)}')"
-
-if [ -z "$PACKAGE_VERSION" ] ; then
-    PACKAGE_VERSION="0.1.0-rc.1"
-fi
-
 # If this is not a release, add commit information to version string.
-if [ -z "$IS_RELEASE" ] ; then
-    PACKAGE_VERSION="${PACKAGE_VERSION}+${COMMIT_SHORT}"
+if [ -z "$is_release" ] ; then
+    # Get first seven characters in string.
+    commit_short="$(echo $pkg_commit | awk '{print substr($0,0,7)}')"
+    pkg_version="${pkg_version}+${commit_short}"
 fi
 
-cp -r "$conan_dir" "$dest_folder" || exit 2
+mkdir "$dest_folder"
+cp "${conan_dir}/conanfile.py" "${dest_folder}/" || exit 2
+cp -r "${conan_dir}/test_package" "${dest_folder}/" || exit 2
 
-sed -i"" \
-    -e "version = \".*\"/version = \"$PACKAGE_VERSION\"/g" \
-    "$dest_folder"/conanfile.py
-
-sed -i"" \
-    -e "s/git checkout .*\"/git checkout $PACKAGE_COMMIT\"/g" \
-    "$dest_folder"/conanfile.py
+# Substitute values in conanfile.py.
+sed -i"" -e "s/<version>/${pkg_version}/g" "$dest_folder"/conanfile.py
+sed -i"" -e "s/<commit>/${pkg_commit}/g" "$dest_folder"/conanfile.py
 
 # Print script and packaging information.
 version
-echo "PACKAGE_VERSION=${PACKAGE_VERSION}"
-echo "PACKAGE_COMMIT=${PACKAGE_COMMIT}"
+echo "pkg_version=${pkg_version}"
+echo "pkg_commit=${pkg_commit}"
 echo "conan_dir=${conan_dir}"
 echo "dest_folder=${dest_folder}"
 
+# Create package.
 current_dir="$(pwd)"
 cd "$dest_folder" && conan create "${pkg_user}/${pkg_channel}"
 result=$?
@@ -186,6 +188,7 @@ if [ $result -ne 0 ] ; then
 fi
 cd "$current_dir"
 
+# Delete packaging folder if not requested to keep it.
 if [ "$keep_folder" != "TRUE" ] ; then
     rm -rf "$dest_folder" || exit 2
 fi
