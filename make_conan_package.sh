@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="2.1.0"
+version_str="2.2.0"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <dir>
@@ -11,10 +11,14 @@ description_str="\
 DESCRIPTION:
   <dir> must be a directory containing a conanfile.py and a test package. Its
   contents are copied into a destination folder that must not already exist,
-  named conan_packaging by default, and the strings '<version>' and '<commit>'
-  are substituted. The package is built and the destination folder is removed
-  afterwards, unless -k is used. The destination folder name can be changed
-  with -d.
+  named conan_packaging by default, and version and commit are substituted by
+  sed according to the following rules:
+
+    version = \"<version>\" -> version = \"\$PACKAGE_VERSION\"
+    git checkout <commit>\" -> git checkout \$PACKAGE_COMMIT\"
+
+  The package is built and the destination folder is removed afterwards, unless
+  -k is used. The destination folder name can be changed with -d.
 
   Version and commit values can be defined by setting the environment variables
   PACKAGE_VERSION and PACKAGE_COMMIT, respectively. If PACKAGE_VERSION is not
@@ -25,12 +29,12 @@ DESCRIPTION:
 
 options_and_returns_str="\
 OPTIONS:
-  -h           Print help and exit
-  -u <user>    Set package user name (default: ess-dmsc)
-  -c <channel> Set package channel name (default: testing)
-  -d <dest>    Destination folder name (default: conan_packaging)
-  -k           Keep destination package folder
-  -v           Print version and exit
+  -h            Print help and exit
+  -u <user>     Set package user name (default: ess-dmsc)
+  -c <channel>  Set package channel name (default: testing)
+  -d <dest>     Destination folder name (default: conan_packaging)
+  -k            Keep destination package folder
+  -v            Print version and exit
 
 ENVIRONMENT VARIABLES:
   PACKAGE_VERSION  replaces version
@@ -157,10 +161,14 @@ if [ -z "$IS_RELEASE" ] ; then
 fi
 
 cp -r "$conan_dir" "$dest_folder" || exit 2
-mv "$dest_folder/conanfile.py.template" "$dest_folder/conanfile.py" || exit 2
 
-sed -i"" -e "s/<version>/$PACKAGE_VERSION/g" "$dest_folder"/conanfile.py
-sed -i"" -e "s/<commit>/$PACKAGE_COMMIT/g" "$dest_folder"/conanfile.py
+sed -i"" \
+    -e "version = \".*\"/version = \"$PACKAGE_VERSION\"/g" \
+    "$dest_folder"/conanfile.py
+
+sed -i"" \
+    -e "s/git checkout .*\"/git checkout $PACKAGE_COMMIT\"/g" \
+    "$dest_folder"/conanfile.py
 
 # Print script and packaging information.
 version
