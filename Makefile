@@ -5,7 +5,8 @@ bindir = $(prefix)/bin
 
 SCRIPTS = \
 	clangformatdiff.sh \
-	make_conan_package.sh
+	make_conan_package.sh \
+	upload_conan_package.sh
 
 .PHONY: install
 install: $(SCRIPTS)
