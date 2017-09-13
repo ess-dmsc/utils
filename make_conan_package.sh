@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="3.0.0"
+version_str="3.0.1"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <path> <version> <commit>
@@ -21,18 +21,18 @@ DESCRIPTION:
 
 options_and_returns_str="\
 OPTIONS:
-  -h            Print help and exit
-  -u <user>     Set package user name (default: ess-dmsc)
-  -c <channel>  Set package channel name (default: testing)
-  -d <dest>     Destination folder name (default: conan_packaging)
-  -r            Create release package
-  -k            Keep destination package folder
-  -v            Print version and exit
+  -h            print help and exit
+  -u <user>     set package user name (default: ess-dmsc)
+  -c <channel>  set package channel name (default: testing)
+  -d <dest>     destination folder name (default: conan_packaging)
+  -r            create release package
+  -k            keep destination package folder
+  -v            print version and exit
 
 ENVIRONMENT VARIABLES:
   pkg_version  replaces version
   pkg_commit   replaces commit
-  is_release       set to omit commit number from version string
+  is_release   set to omit commit number from version string
 
 RETURNS:
   0  success

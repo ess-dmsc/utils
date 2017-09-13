@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="1.0.1"
+version_str="1.0.2"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <path> <remote> <user> <channel>
@@ -17,8 +17,8 @@ DESCRIPTION:
 
 options_and_returns_str="\
 OPTIONS:
-  -h            Print help and exit
-  -v            Print version and exit
+  -h  print help and exit
+  -v  print version and exit
 
 RETURNS:
   0  success
