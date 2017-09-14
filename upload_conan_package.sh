@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="1.0.2"
+version_str="1.1.0"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <path> <remote> <user> <channel>
@@ -13,12 +13,15 @@ DESCRIPTION:
   will be obtained using grep. The package is then uploaded to <remote> as
 
     <name>/<version>@<user>/<channel>
+
+  If -f <filepath> is used, the full package name is appended to <filepath>.
 "
 
 options_and_returns_str="\
 OPTIONS:
-  -h  print help and exit
-  -v  print version and exit
+  -h             print help and exit
+  -v             print version and exit
+  -f <filepath>  append full package name to <filepath>
 
 RETURNS:
   0  success
@@ -48,9 +51,13 @@ version() {
 
 unset is_release
 unset keep_folder
+unset dest_pkg_name_file
 
-while getopts "hv" arg; do
+while getopts "f:hv" arg; do
     case "${arg}" in
+        f)
+            dest_pkg_name_file="${OPTARG}"
+            ;;
         h)
             full_usage
             exit 0
@@ -112,6 +119,13 @@ if [ -z "$conan_channel" ] ; then
     exit 2
 fi
 
+if [ -z "$dest_pkg_name_file" ] ; then
+    >&2 echo "Error: file path cannot be empty"
+    >&2 echo ""
+    usage
+    exit 2
+fi
+
 # Uploading
 # =========
 
@@ -134,6 +148,10 @@ result=$?
 if [ $result -ne 0 ] ; then
     >&2 echo "Error: packaging failed with return code $result"
     exit 1
+fi
+
+if [ -n "$dest_pkg_name_file" ] ; then
+    echo "$pkg" >> "$dest_pkg_name_file"
 fi
 
 exit 0
