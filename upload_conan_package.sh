@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="1.1.1"
+version_str="1.1.2"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <path> <remote> <user> <channel>
@@ -121,7 +121,7 @@ if [ -z "$conan_channel" ] ; then
     exit 2
 fi
 
-if [ (-n "$append_pkg_name_to_file") -a (-z "$dest_pkg_name_file") ] ; then
+if [ -n "$append_pkg_name_to_file" -a -z "$dest_pkg_name_file" ] ; then
     >&2 echo "Error: file path cannot be empty"
     >&2 echo ""
     usage
