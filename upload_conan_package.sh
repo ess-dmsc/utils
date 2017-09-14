@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_str="1.1.0"
+version_str="1.1.1"
 
 usage_str="\
 USAGE: $0 [OPTIONS] <path> <remote> <user> <channel>
@@ -51,11 +51,13 @@ version() {
 
 unset is_release
 unset keep_folder
+unset append_pkg_name_to_file
 unset dest_pkg_name_file
 
 while getopts "f:hv" arg; do
     case "${arg}" in
         f)
+            append_pkg_name_to_file="TRUE"
             dest_pkg_name_file="${OPTARG}"
             ;;
         h)
@@ -119,7 +121,7 @@ if [ -z "$conan_channel" ] ; then
     exit 2
 fi
 
-if [ -z "$dest_pkg_name_file" ] ; then
+if [ (-n "$append_pkg_name_to_file") -a (-z "$dest_pkg_name_file") ] ; then
     >&2 echo "Error: file path cannot be empty"
     >&2 echo ""
     usage
