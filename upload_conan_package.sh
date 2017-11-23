@@ -132,12 +132,12 @@ fi
 # =========
 
 # Get package name from conanfile.py.
-pkg_name=$(grep "name = " ${conanfile_path} | awk '{print $3}')
+pkg_name=$(grep -w "name = " ${conanfile_path} | awk '{print $3}')
 # Remove quotes from package name.
 pkg_name=$(echo $pkg_name | sed -e "s/\"//g")
 
 # Get package version from conanfile.py.
-pkg_version=$(grep "version = " ${conanfile_path} | awk '{print $3}')
+pkg_version=$(grep -w "version = " ${conanfile_path} | awk '{print $3}')
 # Remove quotes from package name.
 pkg_version=$(echo $pkg_version | sed -e "s/\"//g")
 
