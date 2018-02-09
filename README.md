@@ -1,2 +1,3 @@
 # utils
-General utilities
+
+Data Management group build utilities for CMake, Conan and Docker.
