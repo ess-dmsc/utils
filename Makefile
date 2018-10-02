@@ -5,6 +5,7 @@ bindir = $(prefix)/bin
 
 SCRIPTS = \
 	clangformatdiff.sh \
+	filter-make-output \
 	make_conan_package.sh \
 	upload_conan_package.sh
 
