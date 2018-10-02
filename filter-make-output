@@ -1,7 +1,7 @@
 #!/bin/bash
 
-version_str="1.0.1"
-exit_invalid_option_code=123
+version_str="1.0.2"
+exit_script_error_code=123
 
 usage_str="\
 USAGE: $0 [output_file]
@@ -21,7 +21,7 @@ OPTIONS:
   -v    print version and exit
 
 RETURNS:
-  awk return code or $exit_invalid_option_code for invalid option
+  awk return code or $exit_script_error_code for script error
 "
 
 usage() {
@@ -52,7 +52,7 @@ while getopts "hv" arg; do
       ;;
     \?)
       usage
-      exit $exit_invalid_option_code
+      exit $exit_script_error_code
       ;;
   esac
 done
@@ -63,6 +63,13 @@ if [ $# -eq 0 ] ; then
   output_file="output.log"
 else
   output_file=$1
+fi
+
+if [ $# -gt 1 ] ; then
+    >&2 echo "Error: too many arguments"
+    >&2 echo ""
+    usage
+    exit $exit_script_error_code
 fi
 
 awk_script="/\[.*%\]/ { print \$0 } { print \$0 > \"$output_file\" }"
