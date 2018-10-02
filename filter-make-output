@@ -1,6 +1,7 @@
 #!/bin/bash
 
-version_str="1.0.0"
+version_str="1.0.1"
+exit_invalid_option_code=123
 
 usage_str="\
 USAGE: $0 [output_file]
@@ -20,10 +21,15 @@ OPTIONS:
   -v    print version and exit
 
 RETURNS:
-  awk return code
+  awk return code or $exit_invalid_option_code for invalid option
 "
 
 usage() {
+  printf "%s\n%s" \
+    "$usage_str"
+}
+
+full_usage() {
   printf "%s\n%s\n%s" \
     "$usage_str" \
     "$description_str" \
@@ -37,15 +43,21 @@ version() {
 while getopts "hv" arg; do
   case "${arg}" in
     h)
-      usage
+      full_usage
       exit 0
       ;;
     v)
       version
       exit 0
       ;;
+    \?)
+      usage
+      exit $exit_invalid_option_code
+      ;;
   esac
 done
+
+shift $((OPTIND-1))
 
 if [ $# -eq 0 ] ; then
   output_file="output.log"
