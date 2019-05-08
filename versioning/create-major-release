@@ -73,11 +73,11 @@ else
   fi
 fi
 
-# Get all git tags and filter selecting only those with the form "vX.Y.Z[-rcW]".
-# Then take the substring "X.Y.Z", break it into the components "X", "Y" and
-# "Z[-rcW]" and select only "X" (the major version number). Sort the numbers in
-# reverse order and take the first value as the last major version number.
-last_major_version=$(git tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/ { split(substr($1, 2, length($1)-1), a, "\."); print a[1] }' | sort -r | head -n 1)
+# Get all git tags and filter selecting only those with the form "vX.Y.Z". Then
+# take the substring "X.Y.Z", break it into the components "X", "Y" and "Z" and
+# select only "X" (the major version number). Sort the numbers in reverse order
+# and take the first value as the last major version number.
+last_major_version=$(git tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)?$/ { split(substr($1, 2, length($1)-1), a, "\."); print a[1] }' | sort -r | head -n 1)
 r=$?
 if [ "$r" -ne 0 ]; then
   errexit "getting last major version from tag failed"
@@ -123,7 +123,6 @@ git add "$version_header"         || errexit "git add failed"
 git commit -m "create-major-release $version"  || errexit "git commit failed"
 git tag -a "$release_tag"         || errexit "git tag failed for \"$release_tag\""
 
-# TODO: print message with push instructions
 echo "Release $version created. Please remember to push with"
 echo "  git push origin $release_branch --follow-tags"
 exit 0
