@@ -5,14 +5,15 @@ usage() {
     echo "  <path> is the path to the version header to be updated."
     echo ""
     echo "OPTIONS:"
-    echo "  -h  print this message and exit"
-    echo "  -c  create release candidate"
-    echo "  -f  do not prompt for confirmation"
-    echo "  -n  do not fetch tags from Git remote"
+    echo "  -h      print this message and exit"
+    echo "  -c <N>  create release candidate for major version <N>"
+    echo "  -f      do not prompt for confirmation"
+    echo "  -n      do not fetch tags from Git remote"
     echo ""
     echo "RETURNS:"
-    echo "  0   success"
-    echo "  1   error"
+    echo "  0     success"
+    echo "  1     error"
+    echo "  2     aborted"
     exit 1
 }
 
@@ -43,7 +44,7 @@ result=0
 
 if [ "$#" -eq 0 ]; then
   version_header="Version.h"
-  echo "# Using default version header file path"
+  echo "Using default version header file path"
 else
   version_header="$1"
 fi
@@ -79,10 +80,11 @@ elif [ ! -z "$git_status" ]; then
 fi
 
 if [ "$skip_tags_fetch" = "TRUE" ]; then
-  echo "# Not fetching tags from Git remote"
+  echo "Not fetching tags from Git remote"
 else
-  echo "# Fetching tags from Git remote"
-  r=$(git fetch --tags)
+  echo "Fetching tags from Git remote"
+  git fetch --tags
+  r=$?
   if [ "$r" -ne 0 ]; then
     >&2 echo "! Error: \"git fetch\" failed with return code $r"
     >&2 echo ""
@@ -90,43 +92,53 @@ else
   fi
 fi
 
-last_major_version=$(git tag | awk '/v.\..\../ { split(substr($1, 2, length($1)-1), a, "\."); print a[1] }' | sort -r | head -n 1)
+# Get all git tags and filter selecting only those with the form "vX.Y.Z[-rcW]".
+# Then take the substring "X.Y.Z", break it into the components "X", "Y" and
+# "Z[-rcW]" and select only "X" (the major version number). Sort the numbers in
+# reverse order and take the first value as the last major version number.
+last_major_version=$(git tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/ { split(substr($1, 2, length($1)-1), a, "\."); print a[1] }' | sort -r | head -n 1)
 r=$?
 if [ "$r" -ne 0 ]; then
   >&2 echo "! Error: getting last major version from tag failed"
   >&2 echo ""
   exit 1
 elif [ -z "$last_major_version" ]; then
-  echo "# No previous major version found"
+  echo "No previous major version found"
   next_major_version="1"
 else
-  echo "# Last major version found: $last_major_version"
+  echo "Last major version found: $last_major_version"
   next_major_version=$(expr "$last_major_version" '+' '1')
+  r=$?
+  if [ "$r" -ne 0 ]; then
+    >&2 echo "! Error: major version number increment failed with return code $r"
+    >&2 echo ""
+    exit 1
+  fi
 fi
 
 release_branch="release-$next_major_version.0"
 release_tag="v$next_major_version.0.0"
 
-if [ "$release_candidate" = "TRUE" ]; then
-  release_tag="$release_tag-rcX"  # TODO: generalise
-fi
+# if [ "$release_candidate" = "TRUE" ]; then
+#   release_tag="$release_tag-rcX"  # TODO: generalise
+# fi
 
-echo "# Changes to be made:"
-echo "#   new major version will be $next_major_version"
-echo "#   version tag will be $next_major_version"
-echo "#   will update version in file \"$version_header\""
-echo "#   will create and checkout branch \"$release_branch\""
-echo "# You will be prompted for a Git commit message tag annotation"
+echo "Changes to be made:"
+echo "  new major version will be $next_major_version"
+echo "  release tag will be $release_tag"
+echo "  will update version in file \"$version_header\""
+echo "  will create and checkout branch \"$release_branch\""
+echo "You will be prompted for a Git commit message and a tag annotation"
 
 if [ "$skip_confirmation" != "TRUE" ]; then
   echo ""
-  read -p "> Would you like to proceed? [y/N]: " choice
+  read -p "Would you like to proceed? [y/N]: " choice
   case "$choice" in
     y|Y )
       ;;
     * )
-      echo "# Operation aborted"
-      exit 1
+      echo "Exiting on user command"
+      exit 2
       ;;
   esac
 fi

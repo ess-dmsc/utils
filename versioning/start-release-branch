@@ -1,0 +1,42 @@
+#!/bin/bash
+
+usage() {
+    echo "USAGE: start-release-branch [OPTIONS] <version>"
+    echo "  <version> is a MAJOR[.MINOR] version number."
+    echo ""
+    echo "OPTIONS:"
+    echo "  -h  print this message and exit"
+    echo "  -f  do not ask for confirmation"
+    echo ""
+    echo "RETURNS:"
+    echo "  0  success"
+    echo "  1  error"
+    exit 1
+}
+
+while getopts "fs:h" arg; do
+    case "${arg}" in
+        f)
+            force="TRUE"
+            ;;
+        h)
+            usage
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+if [ $# -eq 0 ] ; then
+    >&2 echo "Error: missing version number"
+    >&2 echo ""
+    usage
+fi
+
+current_branch=$(git symbolic-ref --short HEAD)
+
+if [ "$current_branch" != "master" ] ; then
+  echo "Error: must be run from master branch; currently in"
+  echo "  $current_branch"
+  exit 1
+fi

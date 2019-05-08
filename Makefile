@@ -9,7 +9,14 @@ SCRIPTS = \
 	make_conan_package.sh \
 	upload_conan_package.sh
 
-.PHONY: install
+VERSIONING_SCRIPTS = \
+	versioning/create-major-release
+
+.PHONY: install versioning
 install: $(SCRIPTS)
 	install -d $(bindir)
 	install $(SCRIPTS) $(bindir)
+
+versioning: $(VERSIONING_SCRIPTS)
+	install -d $(bindir)
+	install $(VERSIONING_SCRIPTS) $(bindir)
