@@ -168,7 +168,6 @@ git add "$version_header"         || errexit "git add failed"
 git commit -m "create-major-release $version"  || errexit "git commit failed"
 git tag -a "$release_tag"         || errexit "git tag failed for \"$release_tag\""
 
-# TODO: print message with push instructions
 echo "Release $version created. Please remember to push with"
 echo "  git push origin $release_branch --follow-tags"
 exit 0
