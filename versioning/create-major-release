@@ -1,31 +1,33 @@
 #!/bin/bash
 
+# TODO - verify that there is no version.txt in master branch
+# TODO - add automatic diff between this and previous release
+
+function errexit()
+{
+  >&2 echo "! Error: "$1
+  exit 1
+}
+
 usage() {
-    echo "USAGE: create-major-release [OPTIONS] [<path>=Version.h]"
-    echo "  <path> is the path to the version header to be updated."
+    echo "USAGE: create-major-release [OPTIONS]"
     echo ""
     echo "OPTIONS:"
     echo "  -h      print this message and exit"
-    echo "  -c <N>  create release candidate for major version <N>"
     echo "  -f      do not prompt for confirmation"
     echo "  -n      do not fetch tags from Git remote"
     echo ""
     echo "RETURNS:"
     echo "  0     success"
     echo "  1     error"
-    echo "  2     aborted"
     exit 1
 }
 
-release_candidate=""
 skip_confirmation=""
 skip_tags_fetch=""
 
-while getopts "cfhn" arg; do
+while getopts "fhn" arg; do
   case "${arg}" in
-    c)
-      release_candidate="TRUE"
-      ;;
     f)
       skip_confirmation="TRUE"
       ;;
@@ -42,41 +44,22 @@ shift $((OPTIND-1))
 
 result=0
 
-if [ "$#" -eq 0 ]; then
-  version_header="Version.h"
-  echo "Using default version header file path"
-else
-  version_header="$1"
-fi
-
-if [ ! -f "$version_header" ]; then
-  >&2 echo "! Error: file \"$version_header\" not found"
-  >&2 echo ""
-  exit 1
-fi
+version_header="version.txt"
 
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 r=$?
 if [ "$r" -ne 0 ]; then
-  >&2 echo "! Error: \"git rev-parse\" failed with return code $r"
-  >&2 echo ""
-  exit 1
+  errexit "\"git rev-parse\" failed with return code $r"
 elif [ "$current_branch" != "master" ]; then
-  >&2 echo "! Error: not in master branch"
-  >&2 echo ""
-  exit 1
+  errexit "not in master branch"
 fi
 
 git_status=$(git status --porcelain)
 r=$?
 if [ "$r" -ne 0 ]; then
-  >&2 echo "! Error: \"git status\" failed with return code $r"
-  >&2 echo ""
-  exit 1
+  errexit "\"git status\" failed with return code $r"
 elif [ ! -z "$git_status" ]; then
-  >&2 echo "! Error: uncommitted changes present"
-  >&2 echo ""
-  exit 1
+  errexit "uncommitted changes present"
 fi
 
 if [ "$skip_tags_fetch" = "TRUE" ]; then
@@ -86,9 +69,7 @@ else
   git fetch --tags
   r=$?
   if [ "$r" -ne 0 ]; then
-    >&2 echo "! Error: \"git fetch\" failed with return code $r"
-    >&2 echo ""
-    exit 1
+    errexit "\"git fetch\" failed with return code $r"
   fi
 fi
 
@@ -99,36 +80,29 @@ fi
 last_major_version=$(git tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/ { split(substr($1, 2, length($1)-1), a, "\."); print a[1] }' | sort -r | head -n 1)
 r=$?
 if [ "$r" -ne 0 ]; then
-  >&2 echo "! Error: getting last major version from tag failed"
-  >&2 echo ""
-  exit 1
+  errexit "getting last major version from tag failed"
 elif [ -z "$last_major_version" ]; then
-  echo "No previous major version found"
+  echo "No previous major version found, deafulting to 1"
   next_major_version="1"
 else
   echo "Last major version found: $last_major_version"
   next_major_version=$(expr "$last_major_version" '+' '1')
   r=$?
   if [ "$r" -ne 0 ]; then
-    >&2 echo "! Error: major version number increment failed with return code $r"
-    >&2 echo ""
-    exit 1
+    errexit "major version number increment failed with return code $r"
   fi
 fi
 
+version="$next_major_version.0.0"
 release_branch="release-$next_major_version.0"
-release_tag="v$next_major_version.0.0"
-
-# if [ "$release_candidate" = "TRUE" ]; then
-#   release_tag="$release_tag-rcX"  # TODO: generalise
-# fi
+release_tag="v$version"
 
 echo "Changes to be made:"
 echo "  new major version will be $next_major_version"
 echo "  release tag will be $release_tag"
 echo "  will update version in file \"$version_header\""
 echo "  will create and checkout branch \"$release_branch\""
-echo "You will be prompted for a Git commit message and a tag annotation"
+echo "You will be prompted for a tag annotation"
 
 if [ "$skip_confirmation" != "TRUE" ]; then
   echo ""
@@ -138,17 +112,18 @@ if [ "$skip_confirmation" != "TRUE" ]; then
       ;;
     * )
       echo "Exiting on user command"
-      exit 2
+      exit 1
       ;;
   esac
 fi
 
-git checkout -b "release-$next_major_version.0"
-# TODO: update version strings
-git add "$version_header"
-git commit
-git tag -a "$release_tag"
+git checkout -b "$release_branch" || errexit "failed to checkout branch \"$release_branch\""
+echo $version > $version_header   || errexit "unable to create version file \"$version_header\""
+git add "$version_header"         || errexit "git add failed"
+git commit -m "create-major-release $version"  || errexit "git commit failed"
+git tag -a "$release_tag"         || errexit "git tag failed for \"$release_tag\""
 
 # TODO: print message with push instructions
-
+echo "Release $version created. Please remember to push with"
+echo "  git push origin $release_branch --follow-tags"
 exit 0
