@@ -48,7 +48,7 @@ done
 shift $((OPTIND-1))
 
 if [[ $version_bump != "major" &&  $version_bump != "minor" ]]; then
-  errexit "invalid release type - use -bmajor/minor"
+  errexit "invalid release type - use -b major/minor"
 fi
 
 result=0
@@ -88,25 +88,33 @@ function get_new_version()
 {
   CUR_MAJ=0
   CUR_MIN=0
-  CUR_PATCH=0
+  CUR_PAT=0
 
   tags=$(git tag)
-  #echo $tags
+
+  VER_PATT='/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/'
 
   for tag in $tags
   do
     #echo tag: $tag
-    MAJ=$(echo $tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/ {split(substr($1, 2, length($1)-1), a, "\."); print a[1]}')
-    MIN=$(echo $tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/ {split(substr($1, 2, length($1)-1), a, "\."); print a[2]}')
+    line=$(echo $tag | awk -v patt=$VER_PATT '{split(substr($1, 2, length($1)-1), a, "\."); print a[1], a[2], a[3]}')
+    MAJ=$(echo $line | awk '{print $1}')
+    MIN=$(echo $line | awk '{print $2}')
+    PAT=$(echo $line | awk '{print $3}')
+
     if [[ $MAJ != "" && $MIN != "" ]]; then
-      #echo cur: $MAJ.$MIN
-      if [[ $MAJ > $CUR_MAJ || $MAJ == $CUR_MAJ && $MIN > $CUR_MIN ]]; then
+      #echo current line: $MAJ.$MIN.$PAT
+      if [[ $MAJ > $CUR_MAJ ||                     \
+            $MAJ == $CUR_MAJ && $MIN > $CUR_MIN || \
+            $MAJ == $CUR_MAJ && $MIN == $CUR_MIN && $PAT > $CUR_PAT ]]; then
         CUR_MAJ=$MAJ
         CUR_MIN=$MIN
-        fi
-        #echo max: $CUR_MAJ.$CUR_MIN
+        CUR_PAT=$PAT
+      fi
     fi
   done
+
+  PREV_REL="$CUR_MAJ.$CUR_MIN.$CUR_PAT"
 
   if [[ $version_bump == "major" ]]; then
     newmaj=$(( $CUR_MAJ + 1 ))
@@ -115,30 +123,12 @@ function get_new_version()
     newmin=$(( $CUR_MIN + 1 ))
     version="$CUR_MAJ.$newmin.0"
   fi
-  echo $version
 }
 
-# Get all git tags and filter selecting only those with the form "vX.Y.Z[-rcW]".
-# Then take the substring "X.Y.Z", break it into the components "X", "Y" and
-# "Z[-rcW]" and select only "X" (the major version number). Sort the numbers in
-# reverse order and take the first value as the last major version number.
-# last_major_version=$(git tag | awk '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc[1-9][0-9]*)?$/ { split(substr($1, 2, length($1)-1), a, "\."); print a[1] }' | sort -r | head -n 1)
-# r=$?
-# if [ "$r" -ne 0 ]; then
-#   errexit "getting last major version from tag failed"
-# elif [ -z "$last_major_version" ]; then
-#   echo "No previous major version found, defaulting to 1"
-#   next_major_version="1"
-# else
-#   echo "Last major version found: $last_major_version"
-#   next_major_version=$(expr "$last_major_version" '+' '1')
-#   r=$?
-#   if [ "$r" -ne 0 ]; then
-#     errexit "major version number increment failed with return code $r"
-#   fi
-# fi
-
-version=$(get_new_version)
+echo "Determine latest release"
+get_new_version
+echo "Previous release: $PREV_REL"
+echo "New release     : $version"
 release_branch="release-$version"
 release_tag="v$version"
 
@@ -152,14 +142,10 @@ echo "You will be prompted for a tag annotation"
 if [ "$skip_confirmation" != "TRUE" ]; then
   echo ""
   read -p "Would you like to proceed? [y/N]: " choice
-  case "$choice" in
-    y|Y )
-      ;;
-    * )
+  if [[ $choice != 'y' ]]; then
       echo "Exiting on user command"
       exit 1
-      ;;
-  esac
+  fi
 fi
 
 git checkout -b "$release_branch" || errexit "failed to checkout branch \"$release_branch\""
