@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # TODO - verify that there is no version.txt in master branch
 # TODO - add automatic diff between this and previous release
 
