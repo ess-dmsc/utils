@@ -6,15 +6,14 @@ import os, sys, argparse, sh
 version_file="VERSION"
 
 # TODO implement
-def update_self():
+def update_self(branch):
     previous_dir = os.getcwd()
-
-    res = os.path.realpath(__file__)
-    print(res)
-    path, file = os.path.split(res)
+    path, file = os.path.split(os.path.realpath(__file__))
     print("Update {} in {}".format(file, path))
     os.chdir(path)
-    #check_branch('master') # yes no ?
+    if branch == "":
+        branch = 'master'
+    check_branch(branch)
     repo_is_clean()
     gitcmd('fetch', 'git fetch failed')
     gitcmd('pull', 'git pull failed')
@@ -63,10 +62,6 @@ def git_checkout_create_branch(branch):
     res = gitcmd('checkout -b {}'.format(branch), 'unable to checkout/create branch {}'.format(branch))
     print(res)
 
-# TODO skip if skip_flag is set
-def git_fetch():
-    gitcmd('fetch --tags', 'git fetch failed')
-
 # Return tags as a string, replace newlines with space
 def git_get_tags():
     return gitcmd('tag', 'failed to get tags').replace('\n', ' ')
@@ -75,7 +70,7 @@ def git_get_tags():
 # used for both tags and VERSION file, strips leading 'v'
 # 'v1.2.3' -> [1, 2, 3] and '1.2.3' -> [1, 2, 3]
 def version_from_string(ver_str):
-    if len(ver_str) == 0:
+    if len(ver_str) < 5:
         return [0, 0, 0]
     if ver_str[0] == 'v':
         ver_str = ver_str[1:]
@@ -133,11 +128,12 @@ parser.add_argument("-n", action='store_false', help = "don't fetch tags")
 args = parser.parse_args()
 
 if args.u:
-    update_self()
+    update_self(args.b)
     sys.exit(0)
 
 #
-# initial sanity checks
+# # initial sanity checks
+#
 if args.r == 'patch' and args.b == "":
     error_exit('-r patch requires -b branch')
 
@@ -151,35 +147,35 @@ if os.path.isfile(version_file):
 
 repo_is_clean()
 
-# if -n is specified we skip fetching
+# if -n is specified, skip fetching
 if args.n:
-    git_fetch()
+    gitcmd('fetch --tags', 'git fetch failed')
 
-# #
+#
 # # Main release script
-# #
+#
 if args.r == 'patch':
     print("checking out branch \"release-{}\"".format(args.b))
     git_checkout_branch('release-{}'.format(args.b))
     oldver = latest_ver_from_file()
 else:
     check_branch('master')
-    tags = git_get_tags()
-    oldver = latest_ver_from_list(tags)
+    oldver = latest_ver_from_list(git_get_tags())
 
 version, tag, branch = bump_version(oldver, args.r)
 
 print("Changes to be made:")
-print("  new version will be {}".format(version))
-print("  release tag will be \"{}\"".format(tag))
-print("  will update version in file \"{}\"".format(version_file))
-print("  in branch \"{}\"".format(branch))
+print("  new version {}".format(version))
+print("  release tag {}".format(tag))
+print("  updates version in file \'{}\'".format(version_file))
+print("  on branch \"{}\"".format(branch))
 
 # do interactive prompt, last escape chance
 if args.i:
     reply = str(input('proceed? (y/n): ')).lower().strip()
     if reply[0] != 'y':
         print('release terminated by user')
+        git_checkout_branch('master')
         sys.exit(1)
 
 if args.r != 'patch':
@@ -192,3 +188,4 @@ gitcmd('commit -m create-release.py:{}'.format(version), 'git commit failed')
 gitcmd('tag {}'.format(tag), 'git tag {} failed'.format(tag))
 gitcmd('push origin {} --follow-tags'.format(branch), 'git push failed')
 print("Release {} created.".format(version))
+git_checkout_branch('master')
