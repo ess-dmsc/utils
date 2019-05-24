@@ -7,9 +7,7 @@ version_file="VERSION"
 
 # TODO implement
 def update_self():
-    # # Not autoupdate but valled with -u option
-    # function update_build_script()
-    # {
+    print("UPDATE IS NOT IMPLEMENTED YET")
     #   scriptpath=$(dirname "$0")
     #   echo "Update this script \"$0\""
     #   pushd $scriptpath &>/dev/null || errexit "unable to cd into script dir \"$scriptpath\""
@@ -17,7 +15,6 @@ def update_self():
     #     git fetch                   || errexit "git fetch failed"
     #     git pull                    || errexit "unable to pull latest changes - locally edited?"
     #   popd &>/dev/null
-    # }
     return
 
 # print error message and exit
@@ -131,9 +128,13 @@ parser.add_argument("-b", metavar='branch',
                     help = "branch (for patch releases, format: 'x.y')",
                     type = str, default = "")
 parser.add_argument("-u", action='store_true', help = "update script (NOT IMPLEMENTED)")
-parser.add_argument("-i", action='store_true', help = "interactove (NOT IMPLEMENTED)")
-parser.add_argument("-n", action='store_false', help = "don't fetch tags (NOT IMPLEMENTED)")
+parser.add_argument("-i", action='store_true', help = "user confirmation before applying changes")
+parser.add_argument("-n", action='store_false', help = "don't fetch tags")
 args = parser.parse_args()
+
+if args.u:
+    update_self()
+    sys.exit(0)
 
 #
 # initial sanity checks
