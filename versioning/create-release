@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "do not use this script. use the python version instead"
+exit 1
 
 version_file="VERSION"
 
