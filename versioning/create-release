@@ -2,7 +2,6 @@
 
 version_file="VERSION"
 
-# TODO - add update functionality for this script
 # TODO (eventually) - auto commit and push
 
 function errexit()
@@ -24,6 +23,18 @@ function checkbranch()
   fi
 }
 
+# Not autoupdate but valled with -u option
+function update_build_script()
+{
+  scriptpath=$(dirname "$0")
+  echo "Update this script \"$0\""
+  pushd $scriptpath &>/dev/null || errexit "unable to cd into script dir \"$scriptpath\""
+    # checkbranch master # eventually ?
+    git fetch                   || errexit "git fetch failed"
+    git pull                    || errexit "unable to pull latest changes - locally edited?"
+  popd &>/dev/null
+}
+
 # Initial sanity checks
 # for now force call of release script from master branch
 checkbranch "master"
@@ -40,6 +51,7 @@ usage() {
     echo "  -f                do not prompt for confirmation"
     echo "  -n                do not fetch tags from Git remote"
     echo "  -b branch         for patch releases, specify from_branch (branch-x.y)"
+    echo "  -u                update this script"
     echo ""
     echo "RETURNS:"
     echo "  0     success"
@@ -52,7 +64,7 @@ skip_tags_fetch=""
 release_type=""
 from_branch=""
 
-while getopts "fhnb:r:" arg; do
+while getopts "fhnb:r:u" arg; do
   case "${arg}" in
     f)
       skip_confirmation="TRUE"
@@ -65,6 +77,10 @@ while getopts "fhnb:r:" arg; do
       ;;
     b)
       from_branch=$OPTARG
+      ;;
+    u)
+      update_build_script
+      exit 0
       ;;
     h)
       usage
