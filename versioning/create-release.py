@@ -35,7 +35,6 @@ def write_version(ver_str):
 def gitcmd(command, error_string):
     try:
         res = git(command.split(' ')).strip('\n')
-        print(res)
     except:
         error_exit(error_string)
     return res
