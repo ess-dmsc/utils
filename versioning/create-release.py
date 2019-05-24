@@ -7,14 +7,19 @@ version_file="VERSION"
 
 # TODO implement
 def update_self():
-    print("UPDATE IS NOT IMPLEMENTED YET")
-    #   scriptpath=$(dirname "$0")
-    #   echo "Update this script \"$0\""
-    #   pushd $scriptpath &>/dev/null || errexit "unable to cd into script dir \"$scriptpath\""
-    #     # checkbranch master # eventually ?
-    #     git fetch                   || errexit "git fetch failed"
-    #     git pull                    || errexit "unable to pull latest changes - locally edited?"
-    #   popd &>/dev/null
+    previous_dir = os.getcwd()
+
+    res = os.path.realpath(__file__)
+    print(res)
+    path, file = os.path.split(res)
+    print("Update {} in {}".format(file, path))
+    os.chdir(path)
+    #check_branch('master') # yes no ?
+    repo_is_clean()
+    gitcmd('fetch', 'git fetch failed')
+    gitcmd('pull', 'git pull failed')
+    os.chdir(previous_dir)
+    print("Release script updated.")
     return
 
 # print error message and exit
@@ -87,15 +92,11 @@ def latest_ver_from_file():
     return version_from_string(res)
 
 def latest_ver_from_list(versions):
-    curmaj=0
-    curmin=0
-    curpat=0
+    curmaj, curmin, curpat = [0, 0, 0]
     for v in versions.split(' '):
         maj, min, pat = version_from_string(v.replace(' ', ''))
         if (maj > curmaj) or (maj == curmaj and min > curmin) or (maj == curmaj and min == curmin and pat > curpat):
-            curmaj = maj
-            curmin = min
-            curpat = pat
+            curmaj, curmin, curpat = [ maj, min, pat]
     return [curmaj, curmin, curpat]
 
 # return version strings from version numbers
@@ -120,7 +121,7 @@ def bump_version(ver, release):
 #
 # command line options
 parser = argparse.ArgumentParser()
-parser.add_argument("-r", required=True, metavar='release', choices=['major', 'minor', 'patch'],
+parser.add_argument("-r", metavar='release', choices=['major', 'minor', 'patch'],
                     help = "release method (major, minor, patch)",
                     type = str, default = "minor")
 parser.add_argument("-b", metavar='branch',
