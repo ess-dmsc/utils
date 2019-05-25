@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+
 from sh.contrib import git
 from sh import cat
-import os, sys, argparse, sh
+import os, sys, argparse, sh, re
 
 version_file="VERSION"
 
-# TODO implement
+# Update this script from github
 def update_self(branch):
     previous_dir = os.getcwd()
     path, file = os.path.split(os.path.realpath(__file__))
@@ -68,17 +69,14 @@ def git_get_tags():
 
 
 # used for both tags and VERSION file, strips leading 'v'
-# 'v1.2.3' -> [1, 2, 3] and '1.2.3' -> [1, 2, 3]
 def version_from_string(ver_str):
-    if len(ver_str) < 5:
+    res = re.match('v?([0-9])\.([0-9])\.([0-9])', ver_str)
+    if res:
+        return [int(res.group(1)), int(res.group(2)), int(res.group(3))]
+    else:
         return [0, 0, 0]
-    if ver_str[0] == 'v':
-        ver_str = ver_str[1:]
-    res = ver_str.split('.')
-    if len(res) != 3:
-        return [0, 0, 0]
-    return [int(res[0]), int(res[1]), int(res[2])]
 
+# Get latest version from version file (patch release only)
 def latest_ver_from_file():
     try:
         res = cat(version_file).strip('\n')
@@ -86,6 +84,7 @@ def latest_ver_from_file():
         error_exit('failed to get version from file')
     return version_from_string(res)
 
+# Get latest version from tags (major and minor releases only)
 def latest_ver_from_list(versions):
     curmaj, curmin, curpat = [0, 0, 0]
     for v in versions.split(' '):
@@ -113,79 +112,82 @@ def bump_version(ver, release):
         error_exit('Illegal relase (use major/minor/patch)')
     return strings_from_version(new)
 
-#
-# command line options
-parser = argparse.ArgumentParser()
-parser.add_argument("-r", metavar='release', choices=['major', 'minor', 'patch'],
-                    help = "release method (major, minor, patch)",
-                    type = str, default = "minor")
-parser.add_argument("-b", metavar='branch',
-                    help = "branch (for patch releases, format: 'x.y')",
-                    type = str, default = "")
-parser.add_argument("-u", action='store_true', help = "update script (NOT IMPLEMENTED)")
-parser.add_argument("-i", action='store_true', help = "user confirmation before applying changes")
-parser.add_argument("-n", action='store_false', help = "don't fetch tags")
-args = parser.parse_args()
-
-if args.u:
-    update_self(args.b)
-    sys.exit(0)
 
 #
-# # initial sanity checks
+# #
 #
-if args.r == 'patch' and args.b == "":
-    error_exit('-r patch requires -b branch')
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", metavar='release', choices=['major', 'minor', 'patch'],
+                        help = "release method (major, minor, patch)",
+                        type = str, default = "minor")
+    parser.add_argument("-b", metavar='branch',
+                        help = "branch (for patch releases, format: 'x.y')",
+                        type = str, default = "")
+    parser.add_argument("-u", action='store_true', help = "update script (NOT IMPLEMENTED)")
+    parser.add_argument("-i", action='store_true', help = "user confirmation before applying changes")
+    parser.add_argument("-n", action='store_false', help = "don't fetch tags")
+    args = parser.parse_args()
 
-if args.r != 'patch' and args.b != "":
-    error_exit('-b branch can only be used with -r patch')
+    if args.u:
+        update_self(args.b)
+        sys.exit(0)
 
-check_branch('master')
+    # initial sanity checks
+    if args.r == 'patch' and args.b == "":
+        error_exit('-r patch requires -b branch')
 
-if os.path.isfile(version_file):
-    error_exit('VERSION file in master branch is not allowed')
+    if args.r != 'patch' and args.b != "":
+        error_exit('-b branch can only be used with -r patch')
 
-repo_is_clean()
-
-# if -n is specified, skip fetching
-if args.n:
-    gitcmd('fetch --tags', 'git fetch failed')
-
-#
-# # Main release script
-#
-if args.r == 'patch':
-    print("checking out branch \"release-{}\"".format(args.b))
-    git_checkout_branch('release-{}'.format(args.b))
-    oldver = latest_ver_from_file()
-else:
     check_branch('master')
-    oldver = latest_ver_from_list(git_get_tags())
 
-version, tag, branch = bump_version(oldver, args.r)
+    if os.path.isfile(version_file):
+        error_exit('VERSION file in master branch is not allowed')
 
-print("Changes to be made:")
-print("  new version {}".format(version))
-print("  release tag {}".format(tag))
-print("  updates version in file \'{}\'".format(version_file))
-print("  on branch \"{}\"".format(branch))
+    repo_is_clean()
 
-# do interactive prompt, last escape chance
-if args.i:
-    reply = str(input('proceed? (y/n): ')).lower().strip()
-    if reply[0] != 'y':
-        print('release terminated by user')
-        git_checkout_branch('master')
-        sys.exit(1)
+    # if -n is specified, skip fetching
+    if args.n:
+        gitcmd('fetch --tags', 'git fetch failed')
 
-if args.r != 'patch':
-    git_checkout_create_branch(branch)
+    # Release procedure
+    if args.r == 'patch':
+        print("checking out branch \"release-{}\"".format(args.b))
+        git_checkout_branch('release-{}'.format(args.b))
+        oldver = latest_ver_from_file()
+    else:
+        check_branch('master')
+        oldver = latest_ver_from_list(git_get_tags())
 
-check_branch(branch)
-write_version(version)
-gitcmd('add {}'.format(version_file), 'git add {} failed'.format(version_file))
-gitcmd('commit -m create-release.py:{}'.format(version), 'git commit failed')
-gitcmd('tag {}'.format(tag), 'git tag {} failed'.format(tag))
-gitcmd('push origin {} --follow-tags'.format(branch), 'git push failed')
-print("Release {} created.".format(version))
-git_checkout_branch('master')
+    version, tag, branch = bump_version(oldver, args.r)
+
+    print("Changes to be made:")
+    print("  new version {}".format(version))
+    print("  release tag {}".format(tag))
+    print("  updates version in file \'{}\'".format(version_file))
+    print("  on branch \"{}\"".format(branch))
+
+    # do interactive prompt, last escape chance
+    if args.i:
+        reply = str(input('proceed? (y/n): ')).lower().strip()
+        if reply[0] != 'y':
+            print('release terminated by user')
+            git_checkout_branch('master')
+            sys.exit(1)
+
+    if args.r != 'patch':
+        git_checkout_create_branch(branch)
+
+    check_branch(branch)
+    write_version(version)
+    gitcmd('add {}'.format(version_file), 'git add {} failed'.format(version_file))
+    gitcmd('commit -m create-release.py:{}'.format(version), 'git commit failed')
+    gitcmd('tag {}'.format(tag), 'git tag {} failed'.format(tag))
+    gitcmd('push origin {} --follow-tags'.format(branch), 'git push failed')
+    print("Release {} created.".format(version))
+    git_checkout_branch('master')
+
+#
+if __name__ == '__main__':
+    main()
