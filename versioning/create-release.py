@@ -90,7 +90,7 @@ def latest_ver_from_list(versions):
     for v in versions.split(' '):
         maj, min, pat = version_from_string(v.replace(' ', ''))
         if (maj > curmaj) or (maj == curmaj and min > curmin) or (maj == curmaj and min == curmin and pat > curpat):
-            curmaj, curmin, curpat = [ maj, min, pat]
+            curmaj, curmin, curpat = [maj, min, pat]
     return [curmaj, curmin, curpat]
 
 # return version strings from version numbers
@@ -124,7 +124,7 @@ def main():
     parser.add_argument("-b", metavar='branch',
                         help = "branch (for patch releases, format: 'x.y')",
                         type = str, default = "")
-    parser.add_argument("-u", action='store_true', help = "update script (NOT IMPLEMENTED)")
+    parser.add_argument("-u", action='store_true', help = "update this script")
     parser.add_argument("-i", action='store_true', help = "user confirmation before applying changes")
     parser.add_argument("-n", action='store_false', help = "don't fetch tags")
     args = parser.parse_args()
