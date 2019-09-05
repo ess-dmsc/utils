@@ -183,7 +183,7 @@ def main():
     write_version(version)
     gitcmd('add {}'.format(version_file), 'git add {} failed'.format(version_file))
     gitcmd('commit -m create-release.py:{}'.format(version), 'git commit failed')
-    gitcmd('tag {}'.format(tag), 'git tag {} failed'.format(tag))
+    gitcmd('tag -a {} -m "create-release.py:{}"'.format(tag, version), 'git tag {} failed'.format(tag))
     gitcmd('push origin {} --follow-tags'.format(branch), 'git push failed')
     print("Release {} created.".format(version))
     git_checkout_branch('master')
