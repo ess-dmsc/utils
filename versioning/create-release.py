@@ -119,7 +119,7 @@ def bump_version(ver, release):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", metavar='release', choices=['major', 'minor', 'patch'],
-                        help = "release method (major, minor, patch)",
+                        help = "release method (major, minor, patch) default is minor",
                         type = str, default = "minor")
     parser.add_argument("-b", metavar='branch',
                         help = "branch (for patch releases, format: 'x.y')",
@@ -128,6 +128,15 @@ def main():
     parser.add_argument("-i", action='store_true', help = "user confirmation before applying changes")
     parser.add_argument("-n", action='store_false', help = "don't fetch tags")
     args = parser.parse_args()
+
+    dir = os.getcwd()
+    if dir.find("build-utils") != -1:
+        print("WARNING: you are about to version the build-utils directory!")
+        print("CWD: {}".format(dir))
+        reply = str(input('proceed? (y/n): ')).lower().strip()
+        if reply[0] != 'y':
+            print('release terminated by user')
+            sys.exit(1)
 
     if args.u:
         update_self(args.b)
