@@ -2,7 +2,7 @@
 
 from sh.contrib import git
 from sh import cat
-import os, sys, argparse, sh, re
+import os, sys, argparse, re
 
 version_file="VERSION"
 
