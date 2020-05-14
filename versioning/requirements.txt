@@ -1,1 +1,3 @@
 sh
+github_release
+requests
