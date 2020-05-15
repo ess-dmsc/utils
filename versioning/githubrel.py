@@ -86,6 +86,7 @@ def main():
     asset = get_file_from_url(args.url)
 
     print("Creating release")
+    
     grel.gh_release_create(repo, args.release, publish=True, target_commitish=args.commit_hash, asset_pattern=asset)
 
     print("Done")
