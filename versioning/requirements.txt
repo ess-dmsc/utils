@@ -1,4 +1,3 @@
 github_release
-re
 requests
 sh

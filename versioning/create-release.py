@@ -2,6 +2,7 @@
 
 from sh.contrib import git
 from sh import cat
+import github_release as grel
 import os, sys, argparse, re
 
 version_file="VERSION"
@@ -43,6 +44,18 @@ def gitcmd(command, error_string):
     except:
         error_exit(error_string)
     return res
+
+
+def get_github_repo():
+    repourl = gitcmd('remote get-url origin','repo name').replace('\n', ' ')
+    #repourl='https://github.com/ess-dg/dg_MultiBlade_MBUTY.git'
+    #repourl='git@github.com:mortenjc/sandbox.git'
+    res = re.match('^.*github.com[:/](.*)\.git', repourl)
+    if res:
+        return res.group(1)
+    else:
+        error_exit("failed to get repo name")
+
 
 # check for untracked files or uncommitted changes
 def repo_is_clean():
@@ -129,6 +142,9 @@ def main():
     parser.add_argument("-n", action='store_false', help = "don't fetch tags")
     args = parser.parse_args()
 
+
+    repo = get_github_repo()
+
     dir = os.getcwd()
     if dir.find("build-utils") != -1:
         print("WARNING: you are about to version the build-utils directory!")
@@ -176,6 +192,7 @@ def main():
     print("  release tag {}".format(tag))
     print("  updates version in file \'{}\'".format(version_file))
     print("  on branch \"{}\"".format(branch))
+    print("  in repo \"{}\"".format(repo))
 
     # do interactive prompt, last escape chance
     if args.i:
@@ -196,6 +213,11 @@ def main():
     gitcmd('push origin {} --follow-tags'.format(branch), 'git push failed')
     print("Release {} created.".format(version))
     git_checkout_branch('master')
+
+    print("Publish release to github")
+    grel.gh_release_create(repo, tag, publish=True)
+
+    print("done!")
 
 #
 if __name__ == '__main__':
