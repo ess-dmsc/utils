@@ -130,7 +130,10 @@ def bump_version(ver, release):
 # #
 #
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+      description='Make software release for DMSC projects.' +
+                  ' Also uses github API to create a release, and ' +
+                  'thus requires the environment variable GITHUB_TOKEN to be set.')
     parser.add_argument("-r", metavar='release', choices=['major', 'minor', 'patch'],
                         help = "release method (major, minor, patch) default is minor",
                         type = str, default = "minor")
@@ -142,8 +145,10 @@ def main():
     parser.add_argument("-n", action='store_false', help = "don't fetch tags")
     args = parser.parse_args()
 
-    if os.getenv('GITHUB_TOKEN') == None:
+    token = os.getenv('GITHUB_TOKEN')
+    if  token == None:
         error_exit("no GITHUB_TOKEN in environment")
+    print('Uses GITHUB_TOKEN {}'.format(token))
 
     repo = get_github_repo()
 
