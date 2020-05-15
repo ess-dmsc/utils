@@ -83,7 +83,7 @@ def git_get_tags():
 
 # used for both tags and VERSION file, strips leading 'v'
 def version_from_string(ver_str):
-    res = re.match('v?([0-9])\.([0-9])\.([0-9])', ver_str)
+    res = re.match('v?([0-9]+)\.([0-9]+)\.([0-9]+)', ver_str)
     if res:
         return [int(res.group(1)), int(res.group(2)), int(res.group(3))]
     else:
