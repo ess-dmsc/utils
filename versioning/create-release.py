@@ -142,6 +142,8 @@ def main():
     parser.add_argument("-n", action='store_false', help = "don't fetch tags")
     args = parser.parse_args()
 
+    if os.getenv('GITHUB_TOKEN') == None:
+        error_exit("no GITHUB_TOKEN in environment")
 
     repo = get_github_repo()
 
