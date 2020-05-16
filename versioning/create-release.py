@@ -3,9 +3,39 @@
 from sh.contrib import git
 from sh import cat
 import github_release as grel
-import os, sys, argparse, re
+import os, sys, argparse, re, pytest
 
 version_file="VERSION"
+
+# unit test
+def test_version_from_string():
+    assert version_from_string("") == [0, 0, 0]
+    assert version_from_string("vffdf") == [0, 0, 0]
+    assert version_from_string("v1.1.1") == [1, 1, 1]
+    assert version_from_string("v999.9999.99999") == [999, 9999, 99999]
+    assert version_from_string("999.9999.99999") == [999, 9999, 99999]
+    assert version_from_string("r999.9999.99999") == [0, 0, 0]
+
+# unit test
+def test_bump_version():
+    for i in range(200):
+        for j in range(200):
+            assert bump_version([i,j,0], 'major')[0] == '{}.{}.{}'.format(i+1, 0, 0)
+            assert bump_version([1,i,j], 'major')[0] == '2.0.0'
+            assert bump_version([i,j,0], 'minor')[0] == '{}.{}.{}'.format(i, j + 1, 0)
+            assert bump_version([2,i,j], 'minor')[0] == '{}.{}.{}'.format(2, i + 1, 0)
+            assert bump_version([3,i,j], 'patch')[0] == '{}.{}.{}'.format(3, i    , j + 1)
+
+# unit test - list of tags (valid and invalid versions)
+def test_latest_ver_from_list():
+    assert latest_ver_from_list('my_tag a.b.c        gylle') == [0, 0, 0]
+    assert latest_ver_from_list('v0.0.0    va.b.c   gylle v3.2.1') == [3, 2, 1]
+
+    assert latest_ver_from_list('v0.0.0  v1.2.3  v3.2.1') == [3, 2, 1]
+    assert latest_ver_from_list('v3.2.1  v1.2.3  v3.2.0') == [3, 2, 1]
+    assert latest_ver_from_list('v1.2.40 v1.2.30  v1.2.10') == [1, 2, 40]
+    assert latest_ver_from_list('v1.4.10 v1.3.10  v1.2.80') == [1, 4, 10]
+    assert latest_ver_from_list('v200.3.10  v300.4.10  v100.2.80') == [300, 4, 10]
 
 # Update this script from github
 def update_self(branch):
@@ -50,7 +80,7 @@ def get_github_repo():
     repourl = gitcmd('remote get-url origin','repo name').replace('\n', ' ')
     #repourl='https://github.com/ess-dg/dg_MultiBlade_MBUTY.git'
     #repourl='git@github.com:mortenjc/sandbox.git'
-    res = re.match('^.*github.com[:/](.*)\.git', repourl)
+    res = re.match('^.*github.com[:/](.*)[.]git', repourl)
     if res:
         return res.group(1)
     else:
@@ -83,7 +113,7 @@ def git_get_tags():
 
 # used for both tags and VERSION file, strips leading 'v'
 def version_from_string(ver_str):
-    res = re.match('v?([0-9]+)\.([0-9]+)\.([0-9]+)', ver_str)
+    res = re.match('v?([0-9]+)[.]([0-9]+)[.]([0-9]+)', ver_str)
     if res:
         return [int(res.group(1)), int(res.group(2)), int(res.group(3))]
     else:
@@ -102,7 +132,9 @@ def latest_ver_from_list(versions):
     curmaj, curmin, curpat = [0, 0, 0]
     for v in versions.split(' '):
         maj, min, pat = version_from_string(v.replace(' ', ''))
-        if (maj > curmaj) or (maj == curmaj and min > curmin) or (maj == curmaj and min == curmin and pat > curpat):
+        if (maj > curmaj) or \
+           (maj == curmaj and min > curmin) or \
+           (maj == curmaj and min == curmin and pat > curpat):
             curmaj, curmin, curpat = [maj, min, pat]
     return [curmaj, curmin, curpat]
 
