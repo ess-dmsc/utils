@@ -1,7 +1,7 @@
 # Versioning Helper
 
-Git workflow and version file update automation for software releases, following the ECDC guidelines
-
+Git workflow and version file update automation for software releases, following the
+[ECDC guidelines](https://confluence.esss.lu.se/display/ECDC/Software+versioning+and+release+process).
 
 ## Python Requirements
 

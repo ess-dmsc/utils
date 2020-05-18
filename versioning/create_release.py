@@ -2,9 +2,11 @@
 
 from sh.contrib import git
 from sh import cat
+import github_release as grel
 import os, sys, argparse, re
 
 version_file="VERSION"
+
 
 # Update this script from github
 def update_self(branch):
@@ -44,6 +46,18 @@ def gitcmd(command, error_string):
         error_exit(error_string)
     return res
 
+
+def get_github_repo():
+    repourl = gitcmd('remote get-url origin','repo name').replace('\n', ' ')
+    #repourl='https://github.com/ess-dg/dg_MultiBlade_MBUTY.git'
+    #repourl='git@github.com:mortenjc/sandbox.git'
+    res = re.match('^.*github.com[:/](.*)[.]git', repourl)
+    if res:
+        return res.group(1)
+    else:
+        error_exit("failed to get repo name")
+
+
 # check for untracked files or uncommitted changes
 def repo_is_clean():
     res = gitcmd('status --porcelain', 'git status failed')
@@ -70,7 +84,7 @@ def git_get_tags():
 
 # used for both tags and VERSION file, strips leading 'v'
 def version_from_string(ver_str):
-    res = re.match('v?([0-9])\.([0-9])\.([0-9])', ver_str)
+    res = re.match('v?([0-9]+)[.]([0-9]+)[.]([0-9]+)', ver_str)
     if res:
         return [int(res.group(1)), int(res.group(2)), int(res.group(3))]
     else:
@@ -89,7 +103,9 @@ def latest_ver_from_list(versions):
     curmaj, curmin, curpat = [0, 0, 0]
     for v in versions.split(' '):
         maj, min, pat = version_from_string(v.replace(' ', ''))
-        if (maj > curmaj) or (maj == curmaj and min > curmin) or (maj == curmaj and min == curmin and pat > curpat):
+        if (maj > curmaj) or \
+           (maj == curmaj and min > curmin) or \
+           (maj == curmaj and min == curmin and pat > curpat):
             curmaj, curmin, curpat = [maj, min, pat]
     return [curmaj, curmin, curpat]
 
@@ -117,7 +133,10 @@ def bump_version(ver, release):
 # #
 #
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+      description='Make software release for DMSC projects.' +
+                  ' Also uses github API to create a release, and ' +
+                  'thus requires the environment variable GITHUB_TOKEN to be set.')
     parser.add_argument("-r", metavar='release', choices=['major', 'minor', 'patch'],
                         help = "release method (major, minor, patch) default is minor",
                         type = str, default = "minor")
@@ -128,6 +147,13 @@ def main():
     parser.add_argument("-i", action='store_true', help = "user confirmation before applying changes")
     parser.add_argument("-n", action='store_false', help = "don't fetch tags")
     args = parser.parse_args()
+
+    token = os.getenv('GITHUB_TOKEN')
+    if  token == None:
+        error_exit("no GITHUB_TOKEN in environment")
+    print('Uses GITHUB_TOKEN {}'.format(token))
+
+    repo = get_github_repo()
 
     dir = os.getcwd()
     if dir.find("build-utils") != -1:
@@ -176,6 +202,7 @@ def main():
     print("  release tag {}".format(tag))
     print("  updates version in file \'{}\'".format(version_file))
     print("  on branch \"{}\"".format(branch))
+    print("  in repo \"{}\"".format(repo))
 
     # do interactive prompt, last escape chance
     if args.i:
@@ -196,6 +223,11 @@ def main():
     gitcmd('push origin {} --follow-tags'.format(branch), 'git push failed')
     print("Release {} created.".format(version))
     git_checkout_branch('master')
+
+    print("Publish release to github")
+    grel.gh_release_create(repo, tag, publish=True)
+
+    print("done!")
 
 #
 if __name__ == '__main__':
