@@ -3,7 +3,7 @@
 from sh.contrib import git
 from sh import cat
 import github_release as grel
-import os, sys, argparse, re, pytest
+import os, sys, argparse, re
 
 version_file="VERSION"
 
